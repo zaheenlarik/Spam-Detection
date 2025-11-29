@@ -3,15 +3,19 @@
 A robust real-time chat application with integrated spam detection using machine learning. The application features a server-client architecture with a Swing-based GUI, supporting multiple concurrent clients and server-side/client-side spam filtering.
 
 ## Features
-- Multi-client real-time chat
-- ML-based spam detection (Naive Bayes)
-- Client-side + server-side filtering
-- Modern message bubbles (left/right aligned)
-- Red bubbles for blocked spam
-- Chat logging (`chat_log.txt`)
-- Confidence scores for predictions
-- Avatar/profile image support
-- Header controls (Back, Call, Video, More)
+
+- **Real-time Chat**: Multi-client chat application with server broadcasting
+- **Spam Detection**: Machine learning-based spam classification using Naive Bayes
+- **Dual Filtering**: 
+  - Client-side filtering for outgoing messages
+  - Server-side filtering for incoming messages
+- **Message Bubbles**: Clean, modern UI with left/right aligned message bubbles
+- **Spam Notifications**: Visual feedback when messages are blocked (red bubbles)
+- **Chat Logging**: Automatic chat history saved to `chat_log.txt`
+- **Message Deduplication**: Clients don't receive their own sent messages back
+- **Confidence Scores**: Display ML model confidence for each classification
+- **Avatar Support**: Profile images loaded from filesystem or classpath
+- **Control Buttons**: Arrow, Call, Video, and More options buttons in header
 
 ## Project Structure
 
@@ -30,15 +34,13 @@ SpamDetector/
 └── README.md                # This file
 ```
 
-## Requirements
-- Java JDK 8+
-- Python 3.6+
-- Python libraries: `scikit-learn`, `pandas`, `numpy`, `matplotlib`
+## System Requirements
+
+- **Java**: JDK 8 or higher
+- **Python**: 3.6 or higher
+- **Python Libraries**: scikit-learn, pandas, numpy, matplotlib, pickle
 
 ## Installation
-### 1. Navigate to Project
-```bash
-cd SpamDetector
 
 ### 1. Clone/Setup the Project
 
@@ -62,6 +64,7 @@ python ModelTraining.py
 
 This will:
 - Load the spam dataset from `spam.csv`
+- Clean and preprocess text
 - Train a Naive Bayes classifier with TF-IDF vectorization
 - Include text cleaning in the pipeline
 - Save the trained model to `spam_nb_model.pkl`
@@ -232,15 +235,167 @@ Example:
 [2025-11-29 14:24:10] SERVER | conf=-1.0000 | hello there
 ```
 
+## UI Components
+
+### Server Header
+
+```
+[Avatar: Faraz]  Faraz (Online)  [← ☎ 📹 ⋮] [Spam Filter: ON] [✕]
+```
+
+### Client Header
+
+```
+[Avatar: Farwah]  Farwah (Online)  [← ☎ 📹 ⋮] [Spam Filter: ON] [✕]
+```
+
+### Message Bubbles
+
+- **Client Outgoing**: Green bubble (right-aligned)
+- **Server/Other Outgoing**: Green bubble (right-aligned)
+- **Blocked Spam**: Red bubble with "[BLOCKED SPAM]" label
+- **Incoming Messages**: Beige bubble (left-aligned)
+- **System Messages**: Green bubble with status info
+
+Each bubble includes:
+- Message text (HTML-formatted with line breaks)
+- Timestamp (HH:mm format)
+- ML classification label and confidence score (if applicable)
+
+## Troubleshooting
+
+### Python Script Not Found
+
+**Error**: `FileNotFoundError: predict.py not found`
+
+**Solution**: Ensure `predict.py` is in the working directory when running Java. Run from the `SpamDetector` folder:
+
+```bash
+cd SpamDetector
+java SpamDetector.Server
+```
+
+### Model File Not Found
+
+**Error**: `FileNotFoundError: spam_nb_model.pkl`
+
+**Solution**: Train the model first:
+
+```bash
+python ModelTraining.py
+```
+
+### Import Errors in Python
+
+**Error**: `ModuleNotFoundError: No module named 'sklearn'`
+
+**Solution**: Install required packages:
+
+```bash
+pip install scikit-learn pandas numpy matplotlib
+```
+
+### Connection Refused
+
+**Error**: `Connection refused: connect` when starting client
+
+**Solution**: 
+1. Ensure server is running in another terminal
+2. Check that server is listening on port 6001
+3. Verify no firewall is blocking the connection
+
+### Images Not Loading
+
+**Error**: Profile images don't appear in header
+
+**Solution**:
+1. Ensure `Farwah.jpg` and `faraz2.jpg` are in the `SpamDetector` folder
+2. Check file names match exactly (case-sensitive on Linux/Mac)
+3. Verify images are valid JPEG files
+4. Run from the correct working directory
+
+### Process Timeout
+
+**Error**: Messages send but no classification appears
+
+**Solution**: 
+1. Increase timeout in Java code (currently 3 seconds)
+2. Check if Python process is hanging
+3. Verify `predict.py` runs standalone: `python predict.py "test message"`
+
+## Example Session
+
+```powershell
+# Terminal 1: Start Server
+PS> cd SpamDetector
+PS> javac SpamDetector\*.java
+PS> java SpamDetector.Server
+
+# Terminal 2: Start Client 1
+PS> cd SpamDetector
+PS> java SpamDetector.Client
+
+# Terminal 3: Start Client 2
+PS> cd SpamDetector
+PS> java SpamDetector.Client
+
+# In Client 1, type:
+hey how are you
+# Output: Green bubble with "hey how are you" + "ham (0.87)"
+# Server sees: "hey how are you" + "ham (0.87)" from Client 1
+# Client 2 sees: "hey how are you" + "ham (0.87)" from client connection
+
+# In Client 1, type spam:
+congratulations you won a prize click here
+# Output: Red bubble "[BLOCKED SPAM - Outgoing] congratulations you won a prize click here"
+# Server sees: Red notification "[BLOCKED SPAM - Outgoing from Client]"
+# Client 2 sees: Red notification "[BLOCKED SPAM - Outgoing from Client]"
+```
+
+## Performance Notes
+
+- **Spam Classification**: ~50-200ms per message (Python process startup overhead)
+- **Concurrent Clients**: Tested with 10+ clients on localhost
+- **Message Buffer**: Max 500 messages displayed in UI (older messages removed)
+- **Thread Pool**: Server uses cached thread pool for non-blocking broadcasts
+
+## Security Considerations
+
+⚠️ **This is a demonstration project and NOT production-ready:**
+
+- **No Authentication**: Anyone can connect to the server
+- **No Encryption**: Messages sent in plaintext
+- **No Input Validation**: Limited protection against malicious input
+- **Localhost Only**: Default configuration binds to 127.0.0.1 (local machine)
+
+For production use, implement:
+- TLS/SSL encryption
+- User authentication
+- Input sanitization
+- Message size limits
+- Rate limiting
+
+## Future Enhancements
+
+- [ ] Database for persistent chat history
+- [ ] User authentication and accounts
+- [ ] End-to-end encryption
+- [ ] File sharing support
+- [ ] Typing indicators
+- [ ] Message reactions/emojis
+- [ ] Admin console for spam management
+- [ ] Custom ML models per user preference
+- [ ] Distributed server architecture
+- [ ] Mobile client (Android/iOS)
+
 ## License
 
 This project is provided as-is for educational purposes.
 
 ## Authors
 
-- Zaheen Larik
-- Faraz Thebo
-- Ahmed Jammali
+- **Server/Client**: Farwah & Faraz (SpamDetector Application)
+- **ML Model Training**: Naïve Bayes classifier with scikit-learn
 
 ## Contact & Support
 
